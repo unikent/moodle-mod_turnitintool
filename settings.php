@@ -7,44 +7,15 @@ defined('MOODLE_INTERNAL') || die;
 
 if ($ADMIN->fulltree) {
 
-    require_once($CFG->dirroot.'/mod/turnitintool/lib.php');
-    require_once($CFG->dirroot.'/mod/turnitintool/version.php');
-
-    if (isset($PAGE) AND is_callable(array($PAGE->requires, 'js'))) { // Are we using new moodle or old?
-        $jsurl = new moodle_url($CFG->wwwroot.'/mod/turnitintool/scripts/jquery-1.11.0.min.js');
-        $PAGE->requires->js($jsurl,true);
-
-        $jsurl = new moodle_url($CFG->wwwroot.'/mod/turnitintool/scripts/turnitintool.js');
-        $PAGE->requires->js($jsurl,true);
-    } else {
-        require_js($CFG->wwwroot.'/mod/turnitintool/scripts/jquery-1.11.0.min.js');
-        require_js($CFG->wwwroot.'/mod/turnitintool/scripts/turnitintool.js');
-    }
-
-    $param_updatecheck=optional_param('updatecheck',null,PARAM_CLEAN);
-
-    $upgrade = null;
-    if (!is_null($param_updatecheck)) {
-      $upgrade = turnitintool_updateavailable($module);
-      $upgradeavailable = ( is_null( $upgrade ) ) ? ' - No updates available' : ' - <a href="'.$upgrade.'"><i><b>'.get_string('upgradeavailable','turnitintool').'</b></i></a> ';
-    } else {
-      $upgradeavailable = '&nbsp;<a href="'.$CFG->wwwroot.'/admin/settings.php?section=modsettingturnitintool&updatecheck=1">Check for updates</a>';
-    }
-
-    // Get current module version
-    $moduleversion = ( isset( $module->version ) ) ? $module->version : $module->versiondb;
+  require_once(dirname(__FILE__) . "/lib.php");
 
     $toplinks = '<div><a href="'.$CFG->wwwroot.'/mod/turnitintool/extras.php">'.get_string("connecttest", "turnitintool")
                 .'</a> | <a href="'.$CFG->wwwroot.'/mod/turnitintool/extras.php?do=viewreport">'.get_string("showusage", "turnitintool")
                 .'</a> | <a href="'.$CFG->wwwroot.'/mod/turnitintool/extras.php?do=savereport">'.get_string("saveusage", "turnitintool")
                 .'</a> | <a href="'.$CFG->wwwroot.'/mod/turnitintool/extras.php?do=commslog">'.get_string("logs")
-                .'</a> | <a href="'.$CFG->wwwroot.'/mod/turnitintool/extras.php?do=unlinkusers">'.get_string("unlinkusers", "turnitintool");
-
-    if (is_callable("get_file_storage")) {
-        $toplinks .= '</a> | <a href="'.$CFG->wwwroot.'/mod/turnitintool/extras.php?do=files">'.get_string("files", "turnitintool");
-    }
-
-    $toplinks .= '</a> - ('.get_string('moduleversion','turnitintool').': '.( isset( $module->version ) ? $module->version : $module->versiondb ) . $upgradeavailable . ')</div>';
+                .'</a> | <a href="'.$CFG->wwwroot.'/mod/turnitintool/extras.php?do=unlinkusers">'.get_string("unlinkusers", "turnitintool")
+                .'</a> | <a href="'.$CFG->wwwroot.'/mod/turnitintool/extras.php?do=files">'.get_string("files", "turnitintool")
+                . '</a></div>';
 
     $settings->add(new admin_setting_heading('turnitin_header', '', $toplinks));
 
@@ -111,50 +82,8 @@ if ($ADMIN->fulltree) {
     $settings->add(new admin_setting_heading('turnitin_privacy', get_string('studentdataprivacy','turnitintool'),
                        get_string('studentdataprivacy_desc', 'turnitintool')));
 
-    if ( turnitintool_count_records_select( 'turnitintool_users' ) > 0 AND isset( $CFG->turnitin_enablepseudo ) ) {
-        $selectionarray = ( $CFG->turnitin_enablepseudo == 1 ) ? array( 1 => get_string('yes', 'turnitintool') ) : array( 0 => get_string('no', 'turnitintool') );
-        $pseudoselect = new admin_setting_configselect('turnitin_enablepseudo', get_string('enablepseudo', 'turnitintool'),
-                       get_string('enablepseudo_desc', 'turnitintool'), 0, $selectionarray);
-        $pseudoselect->nosave = true;
-    } else if ( turnitintool_count_records_select( 'turnitintool_users' ) > 0 ) {
-        $pseudoselect = new admin_setting_configselect('turnitin_enablepseudo', get_string('enablepseudo', 'turnitintool'),
-                       get_string('enablepseudo_desc', 'turnitintool'), 0, array( 0 => get_string('no', 'turnitintool') ) );
-    } else {
-        $pseudoselect = new admin_setting_configselect('turnitin_enablepseudo', get_string('enablepseudo', 'turnitintool'),
-                       get_string('enablepseudo_desc', 'turnitintool'), 0, $options);
-    }
-
-    $settings->add( $pseudoselect );
-
-    if ( isset( $CFG->turnitin_enablepseudo ) AND $CFG->turnitin_enablepseudo ) {
-
-        $CFG->turnitin_pseudofirstname = ( isset( $CFG->turnitin_pseudofirstname ) )
-                ? $CFG->turnitin_pseudofirstname : get_string('defaultcoursestudent');
-
-        $settings->add(new admin_setting_configtext('turnitin_pseudofirstname', get_string('pseudofirstname', 'turnitintool'),
-                        get_string('pseudofirstname_desc', 'turnitintool'), get_string('defaultcoursestudent')));
-
-        $lnoptions = array( 0 => get_string('user') );
-
-        $user_profiles = turnitintool_get_records( 'user_info_field' );
-        foreach ( $user_profiles as $profile ) {
-            $lnoptions[ $profile->id ] = get_string( 'profilefield', 'admin' ) . ': ' . $profile->name;
-        }
-
-        $settings->add(new admin_setting_configselect('turnitin_pseudolastname', get_string('pseudolastname', 'turnitintool'),
-                        get_string('pseudolastname_desc', 'turnitintool'), 0, $lnoptions));
-
-        $settings->add(new admin_setting_configselect('turnitin_lastnamegen', get_string('psuedolastnamegen', 'turnitintool'),
-                        get_string('psuedolastnamegen_desc', 'turnitintool' ), 0, $options));
-
-        $settings->add(new admin_setting_configtext('turnitin_pseudosalt', get_string('pseudoemailsalt', 'turnitintool'),
-                        get_string('pseudoemailsalt_desc', 'turnitintool'), ''));
-
-        $settings->add(new admin_setting_configtext('turnitin_pseudoemaildomain', get_string('pseudoemaildomain', 'turnitintool'),
-                        get_string('pseudoemaildomain_desc', 'turnitintool'), ''));
-
-    }
-
+    $settings->add(new admin_setting_configselect('turnitin_enablepseudo', get_string('enablepseudo', 'turnitintool'),
+                   get_string('enablepseudo_desc', 'turnitintool'), 0, array( 0 => get_string('no', 'turnitintool') ) ));
 
     // Following are default values for new instance
 
@@ -183,7 +112,7 @@ if ($ADMIN->fulltree) {
                        1 => get_string('yes', 'turnitintool')
                      );
 
-    if ( $CFG->turnitin_useanon ) {
+    if ( isset($CFG->turnitin_useanon) && $CFG->turnitin_useanon ) {
         $settings->add(new admin_setting_configselect('turnitin_default_anon', get_string('anon','turnitintool'),
                         '', 0, $ynoptions ));
     }
@@ -199,7 +128,7 @@ if ($ADMIN->fulltree) {
                        '', 0, $genoptions ));
 
     $suboptions = array( 0 => get_string('norepository','turnitintool'), 1 => get_string('standardrepository','turnitintool'));
-    if ( $CFG->turnitin_userepository ) {
+    if ( isset($CFG->turnitin_userepository) && $CFG->turnitin_userepository ) {
         array_push( $suboptions, get_string('institutionalrepository','turnitintool') );
     }
 

@@ -4,15 +4,15 @@
  * @copyright 2012 Turnitin
  */
 
-require_once("../../config.php");
-require_once("lib.php");
-require_once("../../lib/formslib.php");
-require_once("../../lib/form/text.php");
-require_once("../../lib/form/datetimeselector.php");
-require_once("../../lib/form/hidden.php");
-require_once("../../lib/form/button.php");
-require_once("../../lib/form/submit.php");
-require_once("version.php");
+require_once(dirname(__FILE__) . "/../../config.php");
+require_once(dirname(__FILE__) . "/lib.php");
+require_once($CFG->libdir . "/formslib.php");
+require_once($CFG->libdir . "/form/text.php");
+require_once($CFG->libdir . "/form/datetimeselector.php");
+require_once($CFG->libdir . "/form/hidden.php");
+require_once($CFG->libdir . "/form/button.php");
+require_once($CFG->libdir . "/form/submit.php");
+
 if (!turnitintool_check_config()) {
     turnitintool_print_error('configureerror','turnitintool',NULL,NULL,__FILE__,__LINE__);
     exit();
@@ -440,6 +440,5 @@ foreach ($parts as $part) {
     $parts_string.= $part->partname.': '.$part->tiiassignid;
 }
 $parts_string.=")";
-echo '<!-- Turnitin Moodle Direct Version: '.$module->version.' - '.$parts_string.' -->';
 
 /* ?> */
